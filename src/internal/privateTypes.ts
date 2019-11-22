@@ -1,4 +1,4 @@
-import { DeviceType, LocationProviderInfo, PowerState, AsyncHookResult } from './types';
+import { AsyncHookResult, DeviceType, LocationProviderInfo, PowerState } from './types';
 
 export type NotchDevice = {
   brand: string;

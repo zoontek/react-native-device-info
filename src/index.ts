@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Dimensions, NativeEventEmitter, NativeModules, Platform } from 'react-native';
-import { useOnMount } from './internal/async-hook-wrappers';
+import { useOnMount } from './internal/asyncHookWrappers';
 import devicesWithNotch from './internal/devicesWithNotch';
 import RNDeviceInfo from './internal/nativeInterface';
 import { DeviceInfoModule } from './internal/privateTypes';
