@@ -1,9 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Platform, Dimensions, NativeEventEmitter, NativeModules } from 'react-native';
-import RNDeviceInfo from './internal/nativeInterface';
-import devicesWithNotch from './internal/devicesWithNotch';
-import { DeviceType, PowerState, AsyncHookResult } from './internal/types';
+import { useCallback, useEffect, useState } from 'react';
+import { Dimensions, NativeEventEmitter, NativeModules, Platform } from 'react-native';
 import { useOnMount } from './internal/async-hook-wrappers';
+import devicesWithNotch from './internal/devicesWithNotch';
+import RNDeviceInfo from './internal/nativeInterface';
+import { DeviceInfoModule } from './internal/privateTypes';
+import { AsyncHookResult, DeviceType, PowerState } from './internal/types';
+
+const deviceInfoEmitter = new NativeEventEmitter(NativeModules.RNDeviceInfo);
 
 let uniqueId: string;
 export function getUniqueId() {
@@ -370,18 +373,29 @@ export async function getUserAgent() {
   return userAgent;
 }
 
+export function getUserAgentSync() {
+  if (!userAgent) {
+    if (Platform.OS === 'android' || Platform.OS === 'ios' || Platform.OS === 'web') {
+      userAgent = RNDeviceInfo.getUserAgentSync();
+    } else {
+      userAgent = 'unknown';
+    }
+  }
+  return userAgent;
+}
+
 export async function getFontScale() {
   if (Platform.OS === 'android' || Platform.OS === 'ios') {
     return RNDeviceInfo.getFontScale();
   }
-  return 'unknown';
+  return -1;
 }
 
 export function getFontScaleSync() {
   if (Platform.OS === 'android' || Platform.OS === 'ios') {
     return RNDeviceInfo.getFontScaleSync();
   }
-  return 'unknown';
+  return -1;
 }
 
 let bootloader: string;
@@ -614,13 +628,13 @@ export function getBaseOsSync() {
   return baseOs;
 }
 
-let previewSdkInt: number | 'unknown';
+let previewSdkInt: number;
 export async function getPreviewSdkInt() {
   if (!previewSdkInt) {
     if (Platform.OS === 'android') {
       previewSdkInt = await RNDeviceInfo.getPreviewSdkInt();
     } else {
-      previewSdkInt = 'unknown';
+      previewSdkInt = -1;
     }
   }
   return previewSdkInt;
@@ -631,7 +645,7 @@ export function getPreviewSdkIntSync() {
     if (Platform.OS === 'android') {
       previewSdkInt = RNDeviceInfo.getPreviewSdkIntSync();
     } else {
-      previewSdkInt = 'unknown';
+      previewSdkInt = -1;
     }
   }
   return previewSdkInt;
@@ -1160,9 +1174,9 @@ export function isLocationEnabledSync() {
   return false;
 }
 
-export function isHeadphonesConnected() {
+export async function isHeadphonesConnected() {
   if (Platform.OS === 'android' || Platform.OS === 'ios') {
-    return RNDeviceInfo.isHeadphonesConnected();
+    return await RNDeviceInfo.isHeadphonesConnected();
   }
   return false;
 }
@@ -1188,7 +1202,6 @@ export function getAvailableLocationProvidersSync() {
   return {};
 }
 
-const deviceInfoEmitter = new NativeEventEmitter(NativeModules.RNDeviceInfo);
 export function useBatteryLevel(): number | null {
   const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
 
@@ -1238,12 +1251,12 @@ export function useBatteryLevelIsLow(): number | null {
   return batteryLevelIsLow;
 }
 
-export function usePowerState(): PowerState | {} {
-  const [powerState, setPowerState] = useState<PowerState | {}>({});
+export function usePowerState(): PowerState {
+  const [powerState, setPowerState] = useState<PowerState>({});
 
   useEffect(() => {
     const setInitialValue = async () => {
-      const initialValue: PowerState | {} = await getPowerState();
+      const initialValue: PowerState = await getPowerState();
       setPowerState(initialValue);
     };
 
@@ -1281,127 +1294,130 @@ export function useIsEmulator(): AsyncHookResult<boolean> {
   return useOnMount(isEmulator, false);
 }
 
-export default {
-  getUniqueId,
-  getInstanceId,
-  getInstanceIdSync,
-  getSerialNumber,
-  getSerialNumberSync,
+const deviceInfoModule: DeviceInfoModule = {
   getAndroidId,
   getAndroidIdSync,
-  getIpAddress,
-  getIpAddressSync,
-  isCameraPresent,
-  isCameraPresentSync,
-  getMacAddress,
-  getMacAddressSync,
-  getDeviceId,
-  getManufacturer,
-  getManufacturerSync,
-  getModel,
-  getBrand,
-  getSystemName,
-  getSystemVersion,
-  getBuildId,
-  getBuildIdSync,
   getApiLevel,
   getApiLevelSync,
-  getBundleId,
   getApplicationName,
-  getBuildNumber,
-  getVersion,
-  getReadableVersion,
-  getDeviceName,
-  getDeviceNameSync,
-  getUsedMemory,
-  getUsedMemorySync,
-  getUserAgent,
-  getFontScale,
-  getFontScaleSync,
+  getAvailableLocationProviders,
+  getAvailableLocationProvidersSync,
+  getBaseOs,
+  getBaseOsSync,
+  getBatteryLevel,
+  getBatteryLevelSync,
   getBootloader,
   getBootloaderSync,
+  getBrand,
+  getBuildId,
+  getBuildIdSync,
+  getBuildNumber,
+  getBundleId,
+  getCarrier,
+  getCarrierSync,
+  getCodename,
+  getCodenameSync,
   getDevice,
+  getDeviceId,
+  getDeviceName,
+  getDeviceNameSync,
   getDeviceSync,
+  getDeviceType,
   getDisplay,
   getDisplaySync,
   getFingerprint,
   getFingerprintSync,
+  getFirstInstallTime,
+  getFirstInstallTimeSync,
+  getFontScale,
+  getFontScaleSync,
+  getFreeDiskStorage,
+  getFreeDiskStorageSync,
   getHardware,
   getHardwareSync,
   getHost,
   getHostSync,
-  getProduct,
-  getProductSync,
-  getTags,
-  getTagsSync,
-  getType,
-  getTypeSync,
-  getBaseOs,
-  getBaseOsSync,
-  getPreviewSdkInt,
-  getPreviewSdkIntSync,
-  getSecurityPatch,
-  getSecurityPatchSync,
-  getCodename,
-  getCodenameSync,
   getIncremental,
   getIncrementalSync,
-  isEmulator,
-  isEmulatorSync,
-  isPinOrFingerprintSet,
-  isPinOrFingerprintSetSync,
-  hasNotch,
-  getFirstInstallTime,
-  getFirstInstallTimeSync,
   getInstallReferrer,
   getInstallReferrerSync,
+  getInstanceId,
+  getInstanceIdSync,
+  getIpAddress,
+  getIpAddressSync,
   getLastUpdateTime,
   getLastUpdateTimeSync,
-  getPhoneNumber,
-  getPhoneNumberSync,
-  getCarrier,
-  getCarrierSync,
-  getTotalMemory,
-  getTotalMemorySync,
+  getMacAddress,
+  getMacAddressSync,
+  getManufacturer,
+  getManufacturerSync,
   getMaxMemory,
   getMaxMemorySync,
-  getTotalDiskCapacity,
-  getTotalDiskCapacitySync,
-  getFreeDiskStorage,
-  getFreeDiskStorageSync,
-  getBatteryLevel,
-  getBatteryLevelSync,
+  getModel,
+  getPhoneNumber,
+  getPhoneNumberSync,
   getPowerState,
   getPowerStateSync,
-  isBatteryCharging,
-  isBatteryChargingSync,
-  isLandscape,
-  isLandscapeSync,
+  getPreviewSdkInt,
+  getPreviewSdkIntSync,
+  getProduct,
+  getProductSync,
+  getReadableVersion,
+  getSecurityPatch,
+  getSecurityPatchSync,
+  getSerialNumber,
+  getSerialNumberSync,
+  getSystemAvailableFeatures,
+  getSystemAvailableFeaturesSync,
+  getSystemName,
+  getSystemVersion,
+  getTags,
+  getTagsSync,
+  getTotalDiskCapacity,
+  getTotalDiskCapacitySync,
+  getTotalMemory,
+  getTotalMemorySync,
+  getType,
+  getTypeSync,
+  getUniqueId,
+  getUsedMemory,
+  getUsedMemorySync,
+  getUserAgent,
+  getUserAgentSync,
+  getVersion,
+  hasNotch,
+  hasSystemFeature,
+  hasSystemFeatureSync,
   isAirplaneMode,
   isAirplaneModeSync,
+  isBatteryCharging,
+  isBatteryChargingSync,
+  isCameraPresent,
+  isCameraPresentSync,
+  isEmulator,
+  isEmulatorSync,
+  isHeadphonesConnected,
+  isHeadphonesConnectedSync,
+  isLandscape,
+  isLandscapeSync,
+  isLocationEnabled,
+  isLocationEnabledSync,
+  isPinOrFingerprintSet,
+  isPinOrFingerprintSetSync,
   isTablet,
-  getDeviceType,
-  supportedAbis,
-  supportedAbisSync,
   supported32BitAbis,
   supported32BitAbisSync,
   supported64BitAbis,
   supported64BitAbisSync,
-  hasSystemFeature,
-  hasSystemFeatureSync,
-  getSystemAvailableFeatures,
-  getSystemAvailableFeaturesSync,
-  isLocationEnabled,
-  isLocationEnabledSync,
-  isHeadphonesConnected,
-  isHeadphonesConnectedSync,
-  getAvailableLocationProviders,
-  getAvailableLocationProvidersSync,
+  supportedAbis,
+  supportedAbisSync,
   useBatteryLevel,
   useBatteryLevelIsLow,
-  usePowerState,
-  useFirstInstallTime,
   useDeviceName,
+  useFirstInstallTime,
   useHasSystemFeature,
   useIsEmulator,
+  usePowerState,
 };
+
+export default deviceInfoModule;
